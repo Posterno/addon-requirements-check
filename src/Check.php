@@ -79,7 +79,7 @@ class Check {
 			array(
 				'php' => 'The &#8220;%1$s&#8221; plugin cannot run on PHP versions older than %2$s. Please contact your host and ask them to upgrade.',
 				'wp'  => 'The &#8220;%1$s&#8221; plugin cannot run on WordPress versions older than %2$s. Please update your WordPress.',
-				'pno' => 'The &#8220;%1$s&#8221; version mismatch.',
+				'pno' => 'The &#8220;%1$s&#8221; plugin could not be activated because it requires Posterno %2$s. Please update or install Posterno.',
 			)
 		);
 	}
@@ -93,7 +93,7 @@ class Check {
 	 * @return bool True if the install passes the requirements, false otherwise.
 	 */
 	public function passes() {
-		$passes = $this->php_passes() && $this->wp_passes();
+		$passes = $this->php_passes() && $this->wp_passes() && $this->pno_passes();
 
 		if ( ! $passes ) {
 			add_action( 'admin_notices', array( $this, 'deactivate' ) );
@@ -185,6 +185,54 @@ class Check {
 		add_action( 'admin_notices', array( $this, 'wp_version_notice' ) );
 
 		return false;
+	}
+
+	/**
+	 * Verify Posterno requirements.
+	 *
+	 * @return void
+	 */
+	protected function pno_passes() {
+		if ( self::_pno_at_least( $this->args['pno'] ) ) {
+			return true;
+		}
+
+		add_action( 'admin_notices', array( $this, 'pno_version_notice' ) );
+
+		return false;
+
+	}
+
+	/**
+	 * Verify Posterno version with the required version.
+	 *
+	 * @param string $min_version required min version.
+	 * @return boolean
+	 */
+	protected static function _pno_at_least( $min_version ) {
+		return defined( 'PNO_VERSION' ) && version_compare( PNO_VERSION, $min_version, '>=' );
+	}
+
+	/**
+	 * Show the Posterno version notice.
+	 *
+	 * @since 1.0.0
+	 * @access public
+	 */
+	public function pno_version_notice() {
+		/**
+		 * Filters the notice for outdated WordPress versions.
+		 *
+		 * @param string $message The error message.
+		 * @param string $title   The plugin name.
+		 * @param string $pno     The Posterno version.
+		*/
+		$message = apply_filters( 'pno_requirements_check_posterno_notice', $this->args['i18n']['pno'], $this->args['title'], $this->args['pno'] );
+		?>
+		<div class="error">
+			<p><?php printf( $message, esc_html( $this->args['title'] ), $this->args['pno'] ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
