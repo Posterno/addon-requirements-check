@@ -1,6 +1,6 @@
 {
 	"name": "posterno/addon-requirements-check",
-	"description": "Posterno addon requirements check.",
+	"description": "Simple drop-in library for Posterno addons to check for core plugin version requirements.",
 	"keywords": [
 		"wordpress"
 	],
