@@ -69,6 +69,7 @@ class Check {
 				'php'   => '5.6',
 				'wp'    => '4.9.6',
 				'pno'   => '0.9.0',
+				'wc'    => false,
 				'file'  => null,
 				'i18n'  => array(),
 			)
@@ -80,6 +81,7 @@ class Check {
 				'php' => 'The &#8220;%1$s&#8221; plugin cannot run on PHP versions older than %2$s. Please contact your host and ask them to upgrade.',
 				'wp'  => 'The &#8220;%1$s&#8221; plugin cannot run on WordPress versions older than %2$s. Please update your WordPress.',
 				'pno' => 'The &#8220;%1$s&#8221; plugin could not be activated because it requires Posterno %2$s. Please update or install Posterno.',
+				'wc'  => 'The &#8220;%1$s&#8221; plugin could not be activated because it requires WooCommerce %2$s. Please update or install WooCommerce.',
 			)
 		);
 	}
@@ -93,7 +95,7 @@ class Check {
 	 * @return bool True if the install passes the requirements, false otherwise.
 	 */
 	public function passes() {
-		$passes = $this->php_passes() && $this->wp_passes() && $this->pno_passes();
+		$passes = $this->php_passes() && $this->wp_passes() && $this->pno_passes() && $this->wc_passes();
 
 		if ( ! $passes ) {
 			add_action( 'admin_notices', array( $this, 'deactivate' ) );
@@ -190,7 +192,7 @@ class Check {
 	/**
 	 * Verify Posterno requirements.
 	 *
-	 * @return void
+	 * @return bool
 	 */
 	protected function pno_passes() {
 		if ( self::_pno_at_least( $this->args['pno'] ) ) {
@@ -231,6 +233,64 @@ class Check {
 		?>
 		<div class="error">
 			<p><?php printf( $message, esc_html( $this->args['title'] ), $this->args['pno'] ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Verify WooCommerce requirements.
+	 *
+	 * @return bool
+	 */
+	protected function wc_passes() {
+		if ( $this->args['wc'] === false ) {
+			return true;
+		}
+
+		if ( self::_wc_at_least( $this->args['wc'] ) ) {
+			return true;
+		}
+
+		add_action( 'admin_notices', array( $this, 'wc_version_notice' ) );
+
+		return false;
+
+	}
+
+	/**
+	 * Verify WooCommerce version with the required version.
+	 *
+	 * @param string $min_version required min version.
+	 * @return boolean
+	 */
+	protected static function _wc_at_least( $min_version ) {
+		if ( class_exists( 'WooCommerce' ) ) {
+			global $woocommerce;
+			if ( version_compare( $woocommerce->version, $min_version, '>=' ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Show the WooCommerce version notice.
+	 *
+	 * @since 1.0.0
+	 * @access public
+	 */
+	public function wc_version_notice() {
+		/**
+		 * Filters the notice for outdated WooCommerce versions.
+		 *
+		 * @param string $message The error message.
+		 * @param string $title   The plugin name.
+		 * @param string $pno     The WooCommerce version.
+		*/
+		$message = apply_filters( 'wc_requirements_check_posterno_notice', $this->args['i18n']['wc'], $this->args['title'], $this->args['wc'] );
+		?>
+		<div class="error">
+			<p><?php printf( $message, esc_html( $this->args['title'] ), $this->args['wc'] ); ?></p>
 		</div>
 		<?php
 	}
